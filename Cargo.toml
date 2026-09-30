@@ -1,0 +1,28 @@
+[package]
+name = "relcut"
+version = "0.1.0"
+edition = "2024"
+description = "Releases from conventional commits: a git tag, npm and GitHub Packages, a GitHub release with notes and assets"
+license = "MIT"
+repository = "https://github.com/marcbachmann/relcut"
+homepage = "https://marcbachmann.github.io/relcut/"
+
+[dependencies]
+flate2 = "1"
+git-conventional = "1.1.0"
+serde = { version = "1.0.229", features = ["derive"] }
+sha1 = "0.11.0"
+serde_json = { version = "1.0.151", features = ["preserve_order"] }
+sha2 = "0.11.0"
+ureq = { version = "3", features = ["json"] }
+
+# The tests fingerprint node, some 140 MB, several times per release.
+[profile.dev.package.sha2]
+opt-level = 3
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"

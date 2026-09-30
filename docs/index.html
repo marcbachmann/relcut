@@ -1,0 +1,1408 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1"
+    />
+    <title>relcut · releases from conventional commits</title>
+    <meta
+      name="description"
+      content="relcut releases from conventional commits: checked on every pull request, shipped on merge to npm, GitHub Packages and GitHub releases, with no token in reach of a dependency, script or git hook. One static binary, no config files."
+    />
+    <style>
+      :root {
+        --bg: #fbf9f4;
+        --surface: #ffffff;
+        --surface-2: #f3f1ec;
+        --text: #1d1c1a;
+        --muted: #66625a;
+        --line: #e4e0d7;
+        --accent: #9a6b0c;
+        --accent-soft: #f6ecd4;
+        --warn: #9a6a00;
+        --danger: #b3261e;
+        --code-bg: #ebe7dc;
+        --code-text: #2a2721;
+        --code-dim: #7c7669;
+        --code-green: #2f7d4f;
+        --code-gold: #9a6b0c;
+        --code-line: rgba(0, 0, 0, 0.09);
+        --code-key: #2f5f86;
+        --code-string: #4f7a33;
+        --code-number: #a4512a;
+        --code-expr: #7b4b9a;
+        --code-yellow: #e9c46a;
+        --radius: 14px;
+        --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+        --sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #111214;
+          --surface: #17191c;
+          --surface-2: #1d2024;
+          --text: #ecebe8;
+          --muted: #a3a29d;
+          --line: #2a2d32;
+          --accent: #dfb04f;
+          --accent-soft: #2a2211;
+          --warn: #e9c46a;
+          --danger: #f2827a;
+          --code-bg: #1a1c20;
+          --code-text: #e6e6e3;
+          --code-dim: #8b8f95;
+          --code-green: #6fd3a0;
+          --code-gold: #e3b955;
+          --code-line: rgba(255, 255, 255, 0.07);
+          --code-key: #8fb6dd;
+          --code-string: #a9d08a;
+          --code-number: #e59b70;
+          --code-expr: #c5a0de;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font: 16px/1.6 var(--sans);
+        -webkit-font-smoothing: antialiased;
+      }
+      a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+      code {
+        font-family: var(--mono);
+        font-size: 0.9em;
+        background: var(--surface-2);
+        padding: 0.1em 0.35em;
+        border-radius: 5px;
+      }
+      pre {
+        margin: 0;
+        background: var(--code-bg);
+        color: var(--code-text);
+        border: 1px solid var(--code-line);
+        font: 13.5px/1.6 var(--mono);
+        padding: 18px 20px;
+        border-radius: var(--radius);
+        overflow-x: auto;
+      }
+      pre code {
+        background: none;
+        padding: 0;
+        font-size: inherit;
+        color: inherit;
+      }
+      .c {
+        color: var(--code-dim);
+      }
+      .term {
+        background: var(--code-bg);
+        border: 1px solid var(--code-line);
+        border-radius: var(--radius);
+        overflow: hidden;
+      }
+      .term-bar {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 11px 14px;
+        border-bottom: 1px solid var(--code-line);
+      }
+      .term-bar i {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--code-line);
+        box-shadow: inset 0 0 0 1px var(--code-line);
+      }
+      .term-bar span {
+        margin-left: 8px;
+        font: 12px var(--mono);
+        color: var(--code-dim);
+      }
+      .term pre {
+        border: 0;
+        border-radius: 0;
+        font-size: 12.5px;
+        padding: 16px 18px 20px;
+      }
+      .g {
+        color: var(--code-gold);
+      }
+      .yk {
+        color: var(--code-key);
+      }
+      .ys {
+        color: var(--code-string);
+      }
+      .yn {
+        color: var(--code-number);
+      }
+      .ye {
+        color: var(--code-expr);
+      }
+      .yp {
+        color: var(--code-dim);
+      }
+      .ok {
+        color: var(--code-green);
+      }
+      .y {
+        color: var(--code-yellow);
+      }
+
+      header.top {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        backdrop-filter: saturate(1.4) blur(10px);
+        background: color-mix(in srgb, var(--bg) 82%, transparent);
+        border-bottom: 1px solid var(--line);
+      }
+      .wrap {
+        max-width: 1040px;
+        margin: 0 auto;
+        padding: 0 16px;
+      }
+      nav {
+        display: flex;
+        align-items: center;
+        gap: 22px;
+        height: 56px;
+      }
+      nav .brand {
+        font-weight: 700;
+        color: var(--text);
+        font-family: var(--mono);
+        letter-spacing: -0.02em;
+      }
+      nav .links {
+        display: flex;
+        gap: 18px;
+        margin-left: auto;
+        font-size: 14.5px;
+      }
+      nav .links a {
+        color: var(--muted);
+        white-space: nowrap;
+      }
+      nav .links a:hover {
+        color: var(--text);
+        text-decoration: none;
+      }
+      @media (max-width: 720px) {
+        nav .links .opt {
+          display: none;
+        }
+        nav .links {
+          gap: 14px;
+          font-size: 14px;
+        }
+        .star {
+          padding: 18px;
+        }
+        section {
+          padding: 44px 0;
+        }
+      }
+
+      .hero {
+        padding: 72px 0 40px;
+        display: grid;
+        grid-template-columns: 1.05fr 1fr;
+        gap: 40px;
+        align-items: center;
+      }
+      @media (max-width: 900px) {
+        .hero {
+          grid-template-columns: 1fr;
+          padding-top: 48px;
+        }
+      }
+      .eyebrow {
+        display: inline-block;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--accent);
+        background: var(--accent-soft);
+        padding: 4px 10px;
+        border-radius: 99px;
+      }
+      .hero > :first-child {
+        container-type: inline-size;
+      }
+      h1 {
+        font-size: clamp(36px, 6vw, 56px);
+        font-size: clamp(30px, 10cqi, 56px);
+        line-height: 1.05;
+        letter-spacing: -0.035em;
+        margin: 16px 0 16px;
+      }
+      .lead {
+        font-size: 19px;
+        color: var(--muted);
+        margin: 0 0 26px;
+        max-width: 34em;
+      }
+      .pills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 28px;
+      }
+      .pill {
+        font-size: 13.5px;
+        border: 1px solid var(--line);
+        background: var(--surface);
+        padding: 5px 11px;
+        border-radius: 99px;
+      }
+      .cta {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 11px 18px;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 15px;
+      }
+      .btn.primary {
+        background: var(--accent);
+        color: #fff;
+      }
+      @media (prefers-color-scheme: dark) {
+        .btn.primary {
+          color: #1c1406;
+        }
+      }
+      .btn.ghost {
+        border: 1px solid var(--line);
+        color: var(--text);
+        background: var(--surface);
+      }
+      .btn:hover {
+        text-decoration: none;
+        filter: brightness(1.05);
+      }
+
+      section {
+        padding: 56px 0;
+        border-top: 1px solid var(--line);
+      }
+      h2 {
+        font-size: 30px;
+        letter-spacing: -0.02em;
+        margin: 0 0 10px;
+      }
+      h3 {
+        font-size: 19px;
+        margin: 0 0 8px;
+        letter-spacing: -0.01em;
+      }
+      .sub {
+        color: var(--muted);
+        margin: 0 0 28px;
+        max-width: 46em;
+      }
+
+      .grid {
+        display: grid;
+        gap: 16px;
+      }
+      .hero > *,
+      .grid > *,
+      .scenario > * {
+        min-width: 0;
+      }
+      pre {
+        max-width: 100%;
+      }
+      body {
+        overflow-x: hidden;
+      }
+      .g2 {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .g3 {
+        grid-template-columns: repeat(3, 1fr);
+      }
+      @media (max-width: 860px) {
+        .g2,
+        .g3 {
+          grid-template-columns: 1fr;
+        }
+      }
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 22px;
+      }
+      .card p {
+        margin: 0;
+        color: var(--muted);
+      }
+      .card ul {
+        margin: 0;
+        padding-left: 18px;
+      }
+      .card ul + p {
+        margin-top: 12px;
+      }
+      .card li {
+        margin: 6px 0;
+      }
+      .card.yes h3,
+      .card.no h3 {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+      .card.yes h3::before,
+      .card.no h3::before {
+        flex: 0 0 18px;
+        text-align: center;
+        line-height: 1;
+      }
+      .card.yes h3::before {
+        content: '✔';
+        color: var(--accent);
+        font-size: 17px;
+      }
+      .card.no h3::before {
+        content: '●';
+        color: var(--danger);
+        font-size: 12px;
+      }
+      .card.yes ul,
+      .card.no ul {
+        padding-left: 28px;
+      }
+      .step-n {
+        font-family: var(--mono);
+        font-size: 13px;
+        color: var(--accent);
+        font-weight: 700;
+      }
+
+      .scenario {
+        display: grid;
+        grid-template-columns: 1fr 1.15fr;
+        gap: 28px;
+        padding: 30px 0;
+        border-top: 1px dashed var(--line);
+      }
+      .scenario:first-of-type {
+        border-top: 0;
+        padding-top: 0;
+      }
+      @media (max-width: 900px) {
+        .scenario {
+          grid-template-columns: 1fr;
+        }
+      }
+      .scenario p,
+      .scenario li {
+        color: var(--muted);
+      }
+      .scenario ul {
+        padding-left: 18px;
+        margin: 10px 0 0;
+      }
+      .tag {
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .stack {
+        display: grid;
+        gap: 13px;
+        align-content: start;
+        min-width: 0;
+      }
+      .star {
+        border: 1px solid var(--accent);
+        background: var(--surface);
+        border-radius: var(--radius);
+        padding: 26px;
+        margin-bottom: 8px;
+      }
+      .star .tag {
+        color: var(--accent);
+        font-weight: 700;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14.5px;
+      }
+      th,
+      td {
+        text-align: left;
+        vertical-align: top;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--line);
+      }
+      th {
+        font-size: 12.5px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--muted);
+        font-weight: 600;
+      }
+      td:first-child {
+        white-space: nowrap;
+      }
+      .tablewrap {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        overflow-x: auto;
+      }
+      .guard td:first-child {
+        white-space: normal;
+        width: 34%;
+        font-weight: 600;
+      }
+
+      .stat {
+        font-size: 34px;
+        font-weight: 750;
+        letter-spacing: -0.03em;
+      }
+      .stat small {
+        font-size: 15px;
+        color: var(--muted);
+        font-weight: 500;
+        letter-spacing: 0;
+      }
+
+      footer {
+        padding: 40px 0 60px;
+        color: var(--muted);
+        font-size: 14px;
+        border-top: 1px solid var(--line);
+      }
+    </style>
+  </head>
+  <body>
+    <header class="top">
+      <div class="wrap">
+        <nav>
+          <a
+            class="brand"
+            href="#"
+            >relcut</a
+          >
+          <div class="links">
+            <a
+              class="opt"
+              href="#fit"
+              >Fit</a
+            >
+            <a href="#how">How it works</a>
+            <a href="#scenarios">Scenarios</a>
+            <a
+              class="opt"
+              href="#guards"
+              >Safeguards</a
+            >
+            <a
+              class="opt"
+              href="#reference"
+              >Reference</a
+            >
+            <a href="https://github.com/marcbachmann/relcut">GitHub</a>
+          </div>
+        </nav>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <div class="hero">
+        <div>
+          <span class="eyebrow">Releases from conventional commits</span>
+          <h1>Checked in review.<br />Released on merge.<br />Tokens out of reach.</h1>
+          <p class="lead">
+            Every pull request shows what merging it will release, and fails on a commit that is not
+            conventional or a version outside the target branch's rules. On merge relcut ships it: a
+            git tag, npm and GitHub Packages, a GitHub release with notes and assets. No dependency,
+            script or git hook ever sees a token.
+          </p>
+          <div class="pills">
+            <span class="pill">One static binary, ~2 MB</span>
+            <span class="pill">Zero dependencies</span>
+            <span class="pill">No config files, no plugins</span>
+            <span class="pill">Backport branches built in</span>
+          </div>
+          <div class="cta">
+            <a
+              class="btn primary"
+              href="#quick-start"
+              >Quick start</a
+            >
+            <a
+              class="btn ghost"
+              href="#scenarios"
+              >See the scenarios</a
+            >
+          </div>
+        </div>
+        <div class="term">
+          <div class="term-bar"><i></i><i></i><i></i><span>relcut release</span></div>
+          <pre><code><span class="c">$</span> relcut release
+
+<span class="c">── Environment ───────────────────────────</span>
+   relcut  v1.0.0 <span class="c">· /opt/hostedtoolcache/relcut/1.0.0/…/relcut</span>
+   npm     v11.21.0 <span class="c">· /opt/hostedtoolcache/node/24.11.1/x64/lib/node_modules/npm</span>
+   user    runner <span class="c">· uid 501</span>
+
+<span class="c">── Commits ───────────────────────────────</span>
+   main releases
+<span class="c">▸ 2 commits since v1.0.0</span>
+   <span class="g">v1.1.0</span> <span class="c">· 2 commits since v1.0.0 · 0.0s</span>
+
+<span class="c">── Prepare ───────────────────────────────</span>
+   No install scripts to run <span class="c">· 0.0s</span>
+   Packed @acme/widgets@1.1.0 <span class="c">· 18.2 KB · 1.8s</span>
+<span class="c">▸ Pack the tarball</span>
+   Prepared <span class="g">v1.1.0</span> <span class="c">· 4 steps · 6.4s</span>
+
+<span class="c">── Publish ───────────────────────────────</span>
+   Tagged v1.1.0 <span class="c">· 53de8e0 · 0.4s</span>
+   Published to registry.npmjs.org <span class="c">· on latest · trusted publishing · 2.1s</span>
+   GitHub release <span class="c">· 0.6s</span>
+<span class="c">▸ Publish to registry.npmjs.org</span>
+
+<span class="c">──────────────────────────────────────────</span>
+   Released <span class="g">v1.1.0</span> <span class="c">· npm, github · 12.6s</span>
+
+   Release     <span class="c">github.com/acme/widgets/releases/tag/v1.1.0</span>
+   npm         <span class="c">npmjs.com/package/@acme/widgets/v/1.1.0</span>
+   Dist-tags   <span class="c">latest</span>
+<span class="c">──────────────────────────────────────────</span></code></pre>
+        </div>
+      </div>
+
+      <section id="fit">
+        <h2>Either it fits you, or it does not</h2>
+        <p class="sub">
+          relcut is not an all-round tool. It does one way of releasing, and does it well. Here is
+          the line.
+        </p>
+        <div class="grid g2">
+          <div class="card yes">
+            <h3>It fits when</h3>
+            <ul>
+              <li>
+                your history uses conventional commits: <code>feat:</code>, <code>fix:</code>,
+                <code>BREAKING CHANGE:</code>
+              </li>
+              <li>versions live in git tags, not in a committed <code>package.json</code></li>
+              <li>you release from GitHub Actions to npm, GitHub Packages and GitHub releases</li>
+              <li>you want release branches that take backports</li>
+              <li>you want a release step that cannot run anybody's code with your tokens</li>
+            </ul>
+          </div>
+          <div class="card no">
+            <h3>It does not fit when</h3>
+            <ul>
+              <li>you need monorepos with packages versioned apart</li>
+              <li>you need prereleases (<code>1.0.0-beta.1</code>)</li>
+              <li>your release runs somewhere other than GitHub</li>
+            </ul>
+            <p>
+              There are no plugins: what relcut does not do is a step of your workflow. Another
+              registry takes the tarball between <code>prepare</code> and <code>publish</code>; a
+              <code>CHANGELOG.md</code> commit or an announcement comes after <code>publish</code>,
+              with the outputs <code>version</code>, <code>tag</code> and <code>notes</code>, or in
+              a workflow on the tag's push or on <code>release: published</code>.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section id="quick-start">
+        <h2>Quick start</h2>
+        <p class="sub">
+          One workflow, no <code>.releaserc</code>, no plugins, nothing to install. A
+          <code>fix:</code> releases a patch, a <code>feat:</code> a minor version, a
+          <code>BREAKING CHANGE:</code> a major one.
+        </p>
+        <pre><code><span class="c"># .github/workflows/release.yml</span>
+<span class="yk">name</span><span class="yp">:</span> Release
+<span class="yk">on</span><span class="yp">:</span>
+  <span class="yk">push</span><span class="yp">:</span>
+    <span class="yk">branches</span><span class="yp">:</span> <span class="yp">[</span>main<span class="yp">]</span>
+
+<span class="yk">jobs</span><span class="yp">:</span>
+  <span class="yk">release</span><span class="yp">:</span>
+    <span class="yk">runs-on</span><span class="yp">:</span> ubuntu-latest
+    <span class="yk">permissions</span><span class="yp">:</span>
+      <span class="yk">contents</span><span class="yp">:</span> write       <span class="c"># the tag and the GitHub release</span>
+      <span class="yk">pull-requests</span><span class="yp">:</span> write  <span class="c"># comments on the released pull requests</span>
+      <span class="yk">id-token</span><span class="yp">:</span> write       <span class="c"># npm trusted publishing</span>
+    <span class="yk">steps</span><span class="yp">:</span>
+<span class="yp">      -</span> <span class="yk">uses</span><span class="yp">:</span> actions/checkout@v5
+        <span class="yk">with</span><span class="yp">:</span>
+          <span class="yk">fetch-depth</span><span class="yp">:</span> <span class="yn">0</span>
+          <span class="yk">filter</span><span class="yp">:</span> tree:0
+          <span class="yk">persist-credentials</span><span class="yp">:</span> <span class="yn">false</span>
+<span class="yp">      -</span> <span class="yk">uses</span><span class="yp">:</span> actions/setup-node@v5
+        <span class="yk">with</span><span class="yp">:</span> <span class="yp">{</span> <span class="yk">node-version</span><span class="yp">:</span> <span class="yn">24</span> <span class="yp">}</span>
+<span class="yp">      -</span> <span class="yk">uses</span><span class="yp">:</span> <span class="g">marcbachmann/relcut@v1.0.0</span>
+        <span class="yk">with</span><span class="yp">:</span>
+          <span class="yk">branches</span><span class="yp">:</span> main
+          <span class="yk">publish</span><span class="yp">:</span> npm</code></pre>
+      </section>
+
+      <section id="how">
+        <h2>Three steps, one command</h2>
+        <p class="sub">
+          <code>relcut release</code> runs them all. Run them apart when something has to happen in
+          between, or to check every pull request.
+        </p>
+        <div class="grid g3">
+          <div class="card">
+            <div class="step-n">01 · check</div>
+            <h3>Work out the version</h3>
+            <p>
+              Reads the commits since the last version tag, picks the next version and writes the
+              release notes. Changes nothing, needs no credentials.
+            </p>
+          </div>
+          <div class="card">
+            <div class="step-n">02 · prepare</div>
+            <h3>Pack without tokens</h3>
+            <p>
+              <code>npm ci --ignore-scripts</code>, a rebuild for dependencies with install scripts,
+              the version and a <code>ci</code> block into <code>package.json</code>,
+              <code>npm pack</code>. No credential reaches any of them.
+            </p>
+          </div>
+          <div class="card">
+            <div class="step-n">03 · publish</div>
+            <h3>Tag first, then ship</h3>
+            <p>
+              Checks what it can, then tags and pushes, publishes the packed tarball, creates the
+              GitHub release with its assets and comments on the released pull requests. Run again
+              on the same commit, it finishes a release that failed after its tag.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section id="scenarios">
+        <h2>Scenarios</h2>
+        <p class="sub">
+          Copy the one that matches. Each is a complete step; add <code>actions/checkout</code> with
+          <code>fetch-depth: 0</code>, <code>filter: tree:0</code> and
+          <code>persist-credentials: false</code> before it. A shallow checkout gets a warning, and
+          relcut fetches the history into it.
+        </p>
+
+        <div class="star">
+          <div class="scenario">
+            <div>
+              <span class="tag">THE BIG ONE · RELEASE BRANCHES</span>
+              <h3>Backports for older versions</h3>
+              <p>
+                <code>main</code> moves on. Users on 1.4 still get fixes, from a branch that can
+                only release below what <code>main</code> released already. No setting says so: the
+                tags do.
+              </p>
+              <ul>
+                <li>
+                  With <code>main</code> at <code>v1.5.0</code>, a <code>fix:</code> on
+                  <code>release-1.4</code> releases <code>v1.4.3</code>.
+                </li>
+                <li>
+                  A <code>feat:</code> there fails with <code>v1.5.0 is not below v1.5.0</code>,
+                  before anything is packed or tagged.
+                </li>
+                <li>
+                  npm gets the dist-tag <code>release-1.4</code>, so a backport never moves
+                  <code>latest</code> back.
+                </li>
+                <li>
+                  A branch without a release of its own fails once other branches released, instead
+                  of releasing 1.0.0.
+                </li>
+                <li>
+                  The default branch is the trunk: when <code>release-1.4</code> releases
+                  <code>v1.4.3</code> first, <code>main</code> releases <code>v1.5.0</code> at
+                  least.
+                </li>
+                <li>
+                  Or let a commit cut the branch: a <code>Release-Cut: release-1.5</code> footer on
+                  the first line of the commit's body creates it at the parent of that commit, in
+                  the same atomic push as the tag of <code>main</code>, whose release is a minor
+                  version at least.
+                </li>
+              </ul>
+            </div>
+            <div class="stack">
+              <pre><code><span class="c"># cut the branch from the release it fixes</span>
+git switch -c release-1.4 v1.4.2
+git push -u origin release-1.4</code></pre>
+              <pre><code><span class="yk">on</span><span class="yp">:</span>
+  <span class="yk">push</span><span class="yp">:</span>
+    <span class="yk">branches</span><span class="yp">:</span> <span class="yp">[</span>main<span class="yp">,</span> release-*<span class="yp">]</span>
+<span class="yk">jobs</span><span class="yp">:</span>
+  <span class="yk">release</span><span class="yp">:</span>
+    <span class="yk">steps</span><span class="yp">:</span>
+<span class="yp">      -</span> <span class="yk">uses</span><span class="yp">:</span> <span class="g">marcbachmann/relcut@v1.0.0</span>
+        <span class="yk">with</span><span class="yp">:</span>
+<span class="g">          branches: main release-*</span>
+          <span class="yk">publish</span><span class="yp">:</span> npm</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="scenario">
+          <div>
+            <span class="tag">PULL REQUESTS</span>
+            <h3>See what merging will release</h3>
+            <p>
+              The check's title shows the version, e.g. <code>v1.4.3 · patch on release-1.4</code>.
+              The pull request fails before anyone merges:
+            </p>
+            <ul>
+              <li>
+                on its own commits that are not conventional; history already on the branch is
+                listed, never reported. <code>conventional-commits: warn</code> only warns.
+              </li>
+              <li>
+                on a version outside the target branch's rules, such as a <code>feat:</code> into
+                <code>release-1.4</code>.
+              </li>
+              <li>
+                on a <code>Release-Cut:</code> or <code>release:</code> it asks for and relcut
+                cannot follow.
+              </li>
+            </ul>
+          </div>
+          <pre><code><span class="yk">on</span><span class="yp">:</span>
+  <span class="yk">pull_request</span><span class="yp">:</span>
+<span class="yk">jobs</span><span class="yp">:</span>
+  <span class="yk">check</span><span class="yp">:</span>
+    <span class="yk">runs-on</span><span class="yp">:</span> ubuntu-latest
+    <span class="yk">permissions</span><span class="yp">:</span>
+      <span class="yk">contents</span><span class="yp">:</span> read
+      <span class="yk">checks</span><span class="yp">:</span> write <span class="c"># the check's title shows the version</span>
+    <span class="yk">steps</span><span class="yp">:</span>
+<span class="yp">      -</span> <span class="yk">uses</span><span class="yp">:</span> actions/checkout@v5
+        <span class="yk">with</span><span class="yp">:</span> <span class="yp">{</span> <span class="yk">fetch-depth</span><span class="yp">:</span> <span class="yn">0</span><span class="yp">,</span> <span class="yk">filter</span><span class="yp">:</span> tree:0<span class="yp">,</span> <span class="yk">persist-credentials</span><span class="yp">:</span> <span class="yn">false</span> <span class="yp">}</span>
+<span class="yp">      -</span> <span class="yk">uses</span><span class="yp">:</span> <span class="g">marcbachmann/relcut@v1.0.0</span>
+        <span class="yk">with</span><span class="yp">:</span>
+          <span class="yk">command</span><span class="yp">:</span> check
+          <span class="yk">branches</span><span class="yp">:</span> main release-*
+          <span class="yk">check-run-id</span><span class="yp">:</span> <span class="ye">${{ job.check_run_id }}</span></code></pre>
+        </div>
+
+        <div class="scenario">
+          <div>
+            <span class="tag">NPM</span>
+            <h3>Trusted publishing, no npm token</h3>
+            <p>
+              npm exchanges the job's OIDC token for a short-lived one. Register the workflow as the
+              package's trusted publisher on npmjs.com once. Needs npm 11.5.1 or newer and
+              <code>repository.url</code> in <code>package.json</code> naming the repository,
+              checked before the tag; more than one dist-tag needs 11.21.0, or an
+              <code>npm-token</code>. With <code>npm-stage: true</code> the version waits in npm's
+              stage queue until a maintainer approves it, which sets its one dist-tag; needs npm
+              11.15.0.
+            </p>
+          </div>
+          <pre><code><span class="yk">permissions</span><span class="yp">:</span>
+  <span class="yk">contents</span><span class="yp">:</span> write
+  <span class="yk">pull-requests</span><span class="yp">:</span> write
+  <span class="yk">id-token</span><span class="yp">:</span> write
+<span class="yk">steps</span><span class="yp">:</span>
+<span class="yp">  -</span> <span class="yk">uses</span><span class="yp">:</span> <span class="g">marcbachmann/relcut@v1.0.0</span>
+    <span class="yk">with</span><span class="yp">:</span>
+      <span class="yk">branches</span><span class="yp">:</span> main
+      <span class="yk">publish</span><span class="yp">:</span> npm</code></pre>
+        </div>
+
+        <div class="scenario">
+          <div>
+            <span class="tag">BINARIES</span>
+            <h3>Assets on GitHub releases</h3>
+            <p>
+              relcut releases itself this way. Assets take an optional name, label and content type;
+              the notes get a downloads table with every asset's size and SHA-256.
+            </p>
+            <p>
+              The option <code>github-artifacts</code> attaches artifacts of the same run to the
+              release and needs <code>actions: read</code>.
+            </p>
+          </div>
+          <pre><code><span class="yp">-</span> <span class="yk">uses</span><span class="yp">:</span> <span class="g">marcbachmann/relcut@v1.0.0</span>
+  <span class="yk">with</span><span class="yp">:</span>
+    <span class="yk">branches</span><span class="yp">:</span> main
+    <span class="yk">github-assets</span><span class="yp">:</span> <span class="yp">|</span>
+      dist/app-x86_64-linux
+      dist/app-aarch64-darwin
+      dist/SHA256SUMS</code></pre>
+        </div>
+
+        <div class="scenario">
+          <div>
+            <span class="tag">ON REQUEST</span>
+            <h3>Release when you ask for it</h3>
+            <p>
+              With <code>releases: explicit</code> the commits wait until one asks: a
+              <code>release:</code> commit or a <code>Release:</code> footer. Until then the check
+              reads <code>v1.5.0 · minor on next release</code>. A release by hand is a commit too,
+              made by a <code>workflow_dispatch</code> job.
+            </p>
+          </div>
+          <pre><code><span class="yp">-</span> <span class="yk">uses</span><span class="yp">:</span> <span class="g">marcbachmann/relcut@v1.0.0</span>
+  <span class="yk">with</span><span class="yp">:</span>
+    <span class="yk">branches</span><span class="yp">:</span> main
+    <span class="yk">releases</span><span class="yp">:</span> explicit
+    <span class="yk">publish</span><span class="yp">:</span> npm</code></pre>
+        </div>
+
+        <div class="scenario">
+          <div>
+            <span class="tag">STEPS APART</span>
+            <h3>Build between prepare and publish</h3>
+            <p>
+              Use the version in your build, without any token in reach. Docker images and the rest
+              can follow on the tag or <code>release: published</code>, with a token other than
+              <code>GITHUB_TOKEN</code> so GitHub starts those workflows.
+            </p>
+          </div>
+          <pre><code><span class="yp">-</span> <span class="yk">uses</span><span class="yp">:</span> <span class="g">marcbachmann/relcut@v1.0.0</span>
+  <span class="yk">id</span><span class="yp">:</span> check
+  <span class="yk">with</span><span class="yp">:</span> <span class="yp">{</span> <span class="yk">command</span><span class="yp">:</span> check<span class="yp">,</span> <span class="yk">branches</span><span class="yp">:</span> main <span class="yp">}</span>
+<span class="yp">-</span> <span class="yk">if</span><span class="yp">:</span> steps.check.outputs.release == <span class="ys">'true'</span>
+  <span class="yk">run</span><span class="yp">:</span> npm run build:docs
+<span class="yp">-</span> <span class="yk">if</span><span class="yp">:</span> steps.check.outputs.release == <span class="ys">'true'</span>
+  <span class="yk">uses</span><span class="yp">:</span> <span class="g">marcbachmann/relcut@v1.0.0</span>
+  <span class="yk">with</span><span class="yp">:</span>
+    <span class="yk">command</span><span class="yp">:</span> publish
+    <span class="yk">branches</span><span class="yp">:</span> main
+    <span class="yk">github-assets</span><span class="yp">:</span> dist/docs.zip</code></pre>
+        </div>
+
+        <div class="scenario">
+          <div>
+            <span class="tag">LOCAL</span>
+            <h3>From your machine</h3>
+            <p>
+              Outside of Actions relcut takes the repository and branch from git and the token from
+              <code>gh auth token</code>, and asks before it tags. Without a terminal and without
+              <code>--yes</code> it refuses.
+            </p>
+          </div>
+          <pre><code>$ relcut release --branches main --publish github
+<span class="c">…</span>
+Publish v1.4.3 of acme/widgets from main (github)? [y/N]</code></pre>
+        </div>
+      </section>
+
+      <section id="guards">
+        <h2>What relcut guards against</h2>
+        <p class="sub">
+          A release step holds the keys to your package. relcut is built so nobody else's code gets
+          near them.
+        </p>
+        <div class="tablewrap">
+          <table class="guard">
+            <tr>
+              <th>Risk</th>
+              <th>What relcut does</th>
+            </tr>
+            <tr>
+              <td>A dependency's install script reads your publish token</td>
+              <td>
+                npm runs without any variable whose name holds <code>TOKEN</code>,
+                <code>SECRET</code>, <code>PASSWORD</code> or <code>_AUTH</code>.
+                <code>npm ci</code> runs with <code>--ignore-scripts</code>; rebuild and pack run
+                without credentials.
+              </td>
+            </tr>
+            <tr>
+              <td>A script looks for the token in relcut itself</td>
+              <td>
+                relcut takes those variables out of its own environment, where <code>ps</code> and
+                <code>/proc</code> would show them. On Linux nothing of the same user reads its
+                memory, and npm runs with <code>no_new_privs</code>, so <code>sudo</code> is no way
+                around it.
+              </td>
+            </tr>
+            <tr>
+              <td>A script rewrites npm or node in the runner's tool cache</td>
+              <td>
+                <code>prepare</code> fingerprints node, the npm package and npm's global config
+                before any package code runs. npm gets a token only while every byte still matches,
+                and runs by its full path, never by whatever <code>npm</code> the
+                <code>PATH</code> holds by then.
+              </td>
+            </tr>
+            <tr>
+              <td>The checkout left the job token in <code>.git/config</code></td>
+              <td>
+                <code>prepare</code> refuses to run npm and names the setting, never its value.
+              </td>
+            </tr>
+            <tr>
+              <td>A git hook or a rewritten git config runs next to the push token</td>
+              <td>
+                git runs without hooks. Only <code>ls-remote</code> and <code>push</code> get the
+                token, as a header through <code>GIT_CONFIG_*</code>, from a repository of relcut's
+                own that reads no git config of the checkout, the user or the system.
+              </td>
+            </tr>
+            <tr>
+              <td>A script leaves a process running that reads a later npm's environment</td>
+              <td>
+                Each npm that runs scripts leads a process group of its own, killed once it returns;
+                on Linux relcut adopts every orphan of its scripts and ends every descendant. By
+                default <code>prepare</code> then fails; <code>side-effects: warn</code> goes on. On
+                macOS a process that left its group survives.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                A script writes to the runner's env, path, output or summary file for later steps
+              </td>
+              <td>
+                The scripts' npm gets none of those variables, and the files are put back once it
+                returns. By default <code>prepare</code> then fails; with
+                <code>side-effects: warn</code> the env and path lines come out as the outputs
+                <code>scripts-env</code> and <code>scripts-path</code>.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                A script plants a <code>git</code> or steers <code>npm publish</code> through files
+              </td>
+              <td>
+                git is resolved and fingerprinted when relcut starts and run by that path. The npm
+                that holds a token runs in a directory of relcut's own with a fixed environment; the
+                registry comes from <code>package.json</code> as committed, verified object by
+                object, and the tarball's <code>publishConfig</code> must match it.
+              </td>
+            </tr>
+            <tr>
+              <td>A script prints <code>::add-mask::</code> or a fake <code>::error::</code></td>
+              <td>
+                Workflow commands are stopped with a random token while npm and its scripts print.
+              </td>
+            </tr>
+            <tr>
+              <td>A config file or plugin changes the release</td>
+              <td>
+                There are none. Settings come from flags and <code>RELCUT_*</code> variables only.
+              </td>
+            </tr>
+            <tr>
+              <td>A newer commit landed during the release</td>
+              <td>
+                <code>publish</code> tags only while the branch still points at the released commit,
+                in one atomic push that git refuses once the branch has moved. The next release
+                takes those commits.
+              </td>
+            </tr>
+            <tr>
+              <td>A release fails after its tag</td>
+              <td>
+                Assets, artifacts, the tarball and the npm dist-tags are checked before the tag.
+                Running again on the same commit finishes a release that still failed: what is
+                published stays, the rest is done.
+              </td>
+            </tr>
+            <tr>
+              <td>A release is public before its assets</td>
+              <td>With assets the GitHub release is a draft until they are uploaded.</td>
+            </tr>
+            <tr>
+              <td>A commit that is not conventional gets merged</td>
+              <td>
+                <code>check</code> fails the pull request on its own commits; history already on the
+                branch never blocks a release.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                A <code>Release-Cut:</code> or <code>release:</code> relcut cannot follow gets
+                merged
+              </td>
+              <td>
+                <code>check</code> fails the pull request on its own commits; on the branch it is a
+                warning and never blocks the releases after it.
+              </td>
+            </tr>
+            <tr>
+              <td>A cut moves a branch that is there</td>
+              <td>
+                The cut branch goes in the atomic push with the tag, leased as absent: one that
+                exists stops the release before the tag.
+              </td>
+            </tr>
+            <tr>
+              <td>A backport releases a version another branch released</td>
+              <td>
+                A branch releases only below the lowest version outside its history;
+                <code>constraint</code> narrows it. <code>check</code> stops it.
+              </td>
+            </tr>
+            <tr>
+              <td>A backport moves <code>latest</code> back</td>
+              <td>
+                A release below an existing version publishes under the branch's npm dist-tag, and
+                its GitHub release never becomes the latest.
+              </td>
+            </tr>
+            <tr>
+              <td>A flaky network fails a release halfway</td>
+              <td>Requests retry and time out; pushes retry.</td>
+            </tr>
+            <tr>
+              <td>A damaged download of relcut, or one an earlier step wrote over</td>
+              <td>
+                The action checks the binary against the <code>SHA256SUMS</code> of the same
+                release, fetched again on every run: a binary in the tool cache that no longer
+                matches is downloaded again.
+              </td>
+            </tr>
+          </table>
+        </div>
+        <p class="sub">
+          What no release step can guard inside one job: npm scripts run as the job's user. They get
+          no token from relcut, but they can change files a later step runs or reads. relcut holds
+          node and npm to their fingerprint from its own start, not before it. A release that must
+          not trust its dependencies at all packs in a job without secrets and publishes in another.
+        </p>
+      </section>
+
+      <section id="benefits">
+        <h2>What you get</h2>
+        <div class="grid g3">
+          <div class="card">
+            <div class="stat">~2 MB <small>static binary</small></div>
+            <p>
+              Linux builds are static and run on any runner image; macOS builds for arm64 and x64.
+              Nothing to install on every run.
+            </p>
+          </div>
+          <div class="card">
+            <div class="stat">0 <small>dependencies</small></div>
+            <p>
+              relcut needs git, and npm only when it publishes to npm. The action needs node, bash
+              and curl, all on every runner.
+            </p>
+          </div>
+          <div class="card">
+            <div class="stat">0 <small>config files</small></div>
+            <p>
+              Every option is a flag or a <code>RELCUT_*</code> variable, the same in the action, a
+              workflow step and on your machine.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section id="reference">
+        <h2>Reference</h2>
+        <p class="sub">
+          Every option is a flag, an action input and a <code>RELCUT_&lt;NAME&gt;</code> variable; a
+          flag wins. <code>relcut &lt;command&gt; --help</code> lists what each command uses. To
+          call relcut yourself, <code>marcbachmann/relcut/setup</code> only installs it onto the
+          <code>PATH</code>.
+        </p>
+        <div
+          class="grid g2"
+          style="margin-bottom: 16px"
+        >
+          <div class="tablewrap">
+            <table>
+              <tr>
+                <th>Commit</th>
+                <th>Release</th>
+              </tr>
+              <tr>
+                <td><code>BREAKING CHANGE:</code>, <code>feat!:</code></td>
+                <td>major</td>
+              </tr>
+              <tr>
+                <td><code>Release-Cut: &lt;branch&gt;</code></td>
+                <td>minor at least, cuts the branch</td>
+              </tr>
+              <tr>
+                <td><code>feat:</code></td>
+                <td>minor</td>
+              </tr>
+              <tr>
+                <td><code>fix:</code> <code>perf:</code> <code>revert:</code></td>
+                <td>patch</td>
+              </tr>
+              <tr>
+                <td><code>release:</code>, <code>Release:</code></td>
+                <td>with <code>releases: explicit</code>: patch at least, releases</td>
+              </tr>
+              <tr>
+                <td>anything else</td>
+                <td>none</td>
+              </tr>
+            </table>
+          </div>
+          <div class="tablewrap">
+            <table>
+              <tr>
+                <th>Output</th>
+                <th></th>
+              </tr>
+              <tr>
+                <td><code>version</code> · <code>tag</code></td>
+                <td>e.g. <code>1.4.3</code> · <code>v1.4.3</code></td>
+              </tr>
+              <tr>
+                <td><code>type</code></td>
+                <td>major, minor or patch</td>
+              </tr>
+              <tr>
+                <td><code>release</code></td>
+                <td>
+                  <code>true</code> when this run releases; <code>false</code> again when the branch
+                  moved on before the tag
+                </td>
+              </tr>
+              <tr>
+                <td><code>notes</code> · <code>npm-tarball</code></td>
+                <td>release notes · packed tarball</td>
+              </tr>
+              <tr>
+                <td><code>cut</code></td>
+                <td>the branch a <code>Release-Cut:</code> footer creates with this release</td>
+              </tr>
+              <tr>
+                <td><code>scripts-env</code> · <code>scripts-path</code></td>
+                <td>
+                  what the package's scripts wrote to the runner's env and path files, kept out of
+                  later steps
+                </td>
+              </tr>
+            </table>
+          </div>
+        </div>
+        <div class="tablewrap">
+          <table>
+            <tr>
+              <th>Option</th>
+              <th>Default</th>
+              <th></th>
+            </tr>
+            <tr>
+              <td><code>command</code></td>
+              <td><code>release</code></td>
+              <td>
+                Action only: <code>release</code>, <code>check</code>, <code>prepare</code> or
+                <code>publish</code>
+              </td>
+            </tr>
+            <tr>
+              <td><code>branches</code></td>
+              <td></td>
+              <td>Branches that release; patterns take <code>*</code></td>
+            </tr>
+            <tr>
+              <td><code>releases</code></td>
+              <td><code>auto</code></td>
+              <td>
+                <code>auto</code> releases on every push; <code>explicit</code> waits for a
+                <code>release:</code> commit or a <code>Release:</code> or
+                <code>Release-Cut:</code> footer
+              </td>
+            </tr>
+            <tr>
+              <td><code>min-bump</code></td>
+              <td></td>
+              <td>
+                Release at least <code>patch</code>, <code>minor</code> or <code>major</code>,
+                whatever the commits make
+              </td>
+            </tr>
+            <tr>
+              <td><code>conventional-commits</code></td>
+              <td><code>enforce</code></td>
+              <td>
+                On pull requests: <code>enforce</code> fails on commits that are not conventional,
+                <code>warn</code> warns
+              </td>
+            </tr>
+            <tr>
+              <td><code>check-run-id</code></td>
+              <td></td>
+              <td>
+                <code>${{ job.check_run_id }}</code>: the version goes into the check, and the
+                release once it is out; needs <code>checks: write</code>
+              </td>
+            </tr>
+            <tr>
+              <td><code>side-effects</code></td>
+              <td><code>reject</code></td>
+              <td>
+                <code>reject</code> fails <code>prepare</code> when the package's scripts leave a
+                process running or write the runner's files; <code>warn</code> undoes it and goes on
+              </td>
+            </tr>
+            <tr>
+              <td><code>constraint</code></td>
+              <td></td>
+              <td>Refuse versions outside it: <code>v2</code>, <code>v2.4</code></td>
+            </tr>
+            <tr>
+              <td><code>tag-prefix</code></td>
+              <td><code>v</code></td>
+              <td>Before the version in tags</td>
+            </tr>
+            <tr>
+              <td><code>publish</code></td>
+              <td></td>
+              <td>
+                <code>npm</code> (to <code>publishConfig.registry</code>); the GitHub release is
+                always made
+              </td>
+            </tr>
+            <tr>
+              <td><code>npm-tag</code></td>
+              <td><code>publishConfig.tag</code></td>
+              <td>dist-tags; on a backport the branch name</td>
+            </tr>
+            <tr>
+              <td><code>npm-stage</code></td>
+              <td><code>false</code></td>
+              <td>
+                <code>true</code> stages the version on npmjs for a maintainer to approve; one
+                dist-tag, set with the approval
+              </td>
+            </tr>
+            <tr>
+              <td><code>npm-token</code></td>
+              <td></td>
+              <td>
+                Without it npm uses trusted publishing; GitHub Packages takes
+                <code>github-token</code>
+              </td>
+            </tr>
+            <tr>
+              <td><code>npm-install-token</code></td>
+              <td></td>
+              <td>Read token, for <code>npm ci</code> only</td>
+            </tr>
+            <tr>
+              <td><code>github-token</code></td>
+              <td><code>github.token</code></td>
+              <td>Locally: <code>gh auth token</code></td>
+            </tr>
+            <tr>
+              <td><code>github-assets</code></td>
+              <td></td>
+              <td>
+                Files, or JSON with <code>file</code>, <code>name</code>, <code>label</code>,
+                <code>content_type</code>
+              </td>
+            </tr>
+            <tr>
+              <td><code>github-artifacts</code></td>
+              <td></td>
+              <td>Artifacts of this workflow run</td>
+            </tr>
+            <tr>
+              <td><code>github-comments</code></td>
+              <td><code>true</code></td>
+              <td>Comment on the released pull requests</td>
+            </tr>
+            <tr>
+              <td><code>release-notes</code></td>
+              <td></td>
+              <td>Replaces the generated notes</td>
+            </tr>
+            <tr>
+              <td><code>release-notes-template</code></td>
+              <td><code>{notes}</code></td>
+              <td>
+                Also <code>{version} {tag} {previous_tag} {date} {repository} {compare_url}</code>
+              </td>
+            </tr>
+            <tr>
+              <td><code>release-title</code></td>
+              <td><code>Version {tag}</code></td>
+              <td><code>{version} {tag} {date} {repository}</code></td>
+            </tr>
+            <tr>
+              <td><code>comment-template</code></td>
+              <td><code>🚀 Released in …</code></td>
+              <td>
+                <code
+                  >{version} {tag} {date} {repository} {release_url} {npm_package} {dist_tags}</code
+                >; the npm ones are in the default when it published to npm
+              </td>
+            </tr>
+            <tr>
+              <td><code>working-directory</code></td>
+              <td><code>.</code></td>
+              <td>The package to release</td>
+            </tr>
+            <tr>
+              <td><code>pack-dir</code></td>
+              <td><code>$RUNNER_TEMP/relcut</code></td>
+              <td>Where <code>prepare</code> leaves the tarball</td>
+            </tr>
+            <tr>
+              <td><code>keep-tarball</code></td>
+              <td><code>false</code></td>
+              <td>Keep the tarball after <code>publish</code></td>
+            </tr>
+            <tr>
+              <td><code>pass-env</code></td>
+              <td></td>
+              <td>Credential-like variables npm and git may see</td>
+            </tr>
+            <tr>
+              <td><code>dry-run</code></td>
+              <td><code>false</code></td>
+              <td><code>true</code> publishes nothing</td>
+            </tr>
+            <tr>
+              <td><code>version</code></td>
+              <td>the action's</td>
+              <td>Action only: the relcut version to run</td>
+            </tr>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        relcut · <a href="https://github.com/marcbachmann/relcut">github.com/marcbachmann/relcut</a>
+      </div>
+    </footer>
+  </body>
+</html>

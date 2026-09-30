@@ -1,0 +1,133 @@
+name: relcut
+description: >
+  Releases from conventional commits: the next version, a git tag, npm and
+  GitHub Packages, a GitHub release with notes and assets. One static binary,
+  no dependencies, no config files.
+author: Marc Bachmann
+branding:
+  icon: tag
+  color: green
+
+inputs:
+  command:
+    description: release, or one of its steps check, prepare and publish
+    default: release
+  version:
+    description: >
+      relcut version to run, e.g. 1.4.2; by default the one of the release
+      this action is pinned to
+    default: ''
+  branches:
+    description: Branches that release, e.g. main release-*, as a list
+    default: ''
+  releases:
+    description: >
+      auto releases what the commits make on every push; explicit waits for
+      a release: commit or a Release: or Release-Cut: footer
+    default: ''
+  min-bump:
+    description: >
+      Release at least patch, minor or major, whatever the commits make;
+      by default the commits alone decide
+    default: ''
+  conventional-commits:
+    description: >
+      enforce fails a pull request with a commit that is not conventional,
+      warn only warns
+    default: ''
+  side-effects:
+    description: >
+      reject fails prepare when the package's scripts leave a process running
+      or write the runner's files; warn undoes it and goes on
+    default: ''
+  check-run-id:
+    description: >
+      Write the version into this check, e.g. the job's own check_run_id,
+      and the release once it is out; needs checks: write
+    default: ''
+  constraint:
+    description: Refuse a version outside it, e.g. v312.0
+    default: ''
+  tag-prefix:
+    description: Before the version in tags
+    default: ''
+  publish:
+    description: npm (to publishConfig.registry); the GitHub release is always made
+    default: ''
+  npm-tag:
+    description: dist-tags, by default publishConfig.tag
+    default: ''
+  npm-stage:
+    description: true stages the version on npmjs, public once a maintainer approves it
+    default: ''
+  npm-token:
+    description: npm token; without it npm publishes through trusted publishing
+    default: ''
+  npm-install-token:
+    description: Read token for npm ci
+    default: ''
+  github-token:
+    description: Token for the tag, the release, the comments and the history of a shallow checkout
+    default: ${{ github.token }}
+  github-assets:
+    description: Files for the GitHub release, or JSON with file, name, label and content_type
+    default: ''
+  github-artifacts:
+    description: Artifacts of this workflow run to attach to the GitHub release
+    default: ''
+  github-comments:
+    description: Comment on the released pull requests
+    default: ''
+  release-notes:
+    description: Instead of the generated release notes
+    default: ''
+  release-notes-template:
+    description: '{notes} {assets} {version} {tag} {previous_tag} {date} {repository} {compare_url}'
+    default: ''
+  release-title:
+    description: '{version} {tag} {date} {repository}; by default Version {tag}'
+    default: ''
+  comment-template:
+    description: '{version} {tag} {date} {repository} {release_url} {npm_package} {dist_tags}; by default the tag, with npm also the package and its dist-tags'
+    default: ''
+  working-directory:
+    description: The package to release
+    default: ''
+  pack-dir:
+    description: Where prepare leaves the tarball for publish
+    default: ''
+  keep-tarball:
+    description: true keeps the tarball after publish
+    default: ''
+  pass-env:
+    description: Credential-like variables npm and git may see, as patterns
+    default: ''
+  dry-run:
+    description: true publishes nothing
+    default: ''
+
+outputs:
+  version:
+    description: The released version, e.g. 1.4.3; empty when nothing releases
+  tag:
+    description: Its tag, e.g. v1.4.3
+  type:
+    description: major, minor or patch
+  release:
+    description: true when this run releases
+  notes:
+    description: The release notes
+  cut:
+    description: The branch a Release-Cut footer creates with this release
+  npm-tarball:
+    description: The tarball prepare packed
+  scripts-env:
+    description: What the package's scripts wrote to GITHUB_ENV, kept out of later steps
+  scripts-path:
+    description: What the package's scripts wrote to GITHUB_PATH, kept out of later steps
+  relcut-version:
+    description: The relcut version that ran
+
+runs:
+  using: node24
+  main: action/main.js

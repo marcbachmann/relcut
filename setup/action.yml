@@ -1,0 +1,33 @@
+name: relcut setup
+description: Installs relcut for this runner and puts it on the PATH, to call it yourself.
+author: Marc Bachmann
+branding:
+  icon: download
+  color: green
+
+inputs:
+  version:
+    description: >
+      relcut version to install, e.g. 1.4.2; by default the one of the
+      release this action is pinned to
+    default: ''
+
+outputs:
+  path:
+    description: The relcut binary
+    value: ${{ steps.install.outputs.path }}
+  version:
+    description: The installed relcut version
+    value: ${{ steps.install.outputs.version }}
+
+runs:
+  using: composite
+  steps:
+    - id: install
+      shell: bash
+      run: '"$GITHUB_ACTION_PATH/install.sh"'
+      env:
+        RELCUT_REPOSITORY: ${{ github.action_repository }}
+        RELCUT_REF: ${{ github.action_ref }}
+        RELCUT_VERSION_WANTED: ${{ inputs.version }}
+        RELCUT_ADD_TO_PATH: 'true'

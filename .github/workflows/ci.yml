@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    name: Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - run: cargo fmt --check
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo test
+
+  # relcut releases itself: check on main, then build every target and publish
+  # them with the release. Pushes elsewhere and pull requests stop at check.
+  release:
+    name: Release
+    needs: test
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+      checks: write
+    env:
+      RELCUT_BRANCHES: main
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      # The dependencies of every target come from the cache, so a release
+      # only compiles relcut itself again, with its version.
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - run: cargo build --release
+      - id: check
+        run: target/release/relcut check
+      # Records the git publish is held to.
+      - if: steps.check.outputs.release == 'true'
+        run: target/release/relcut prepare
+      - if: steps.check.outputs.release == 'true'
+        run: scripts/install-tools.sh
+      # The binaries and the SBOM carry the version they are released as.
+      - if: steps.check.outputs.release == 'true'
+        run: |
+          sed -i "0,/^version = .*/s//version = \"$VERSION\"/" Cargo.toml
+          scripts/dist.sh
+          cargo cyclonedx --format json --spec-version 1.5 --no-build-deps --override-filename relcut.cdx
+          mv relcut.cdx.json dist/
+          test "$(dist/relcut-x86_64-unknown-linux-musl --version)" = "relcut $VERSION"
+          test "$(jq -r .metadata.component.version dist/relcut.cdx.json)" = "$VERSION"
+        env:
+          VERSION: ${{ steps.check.outputs.version }}
+      - if: steps.check.outputs.release == 'true'
+        run: target/release/relcut publish
+        env:
+          RELCUT_GITHUB_TOKEN: ${{ github.token }}
+          RELCUT_GITHUB_ASSETS: |
+            dist/relcut-aarch64-apple-darwin
+            dist/relcut-x86_64-apple-darwin
+            dist/relcut-aarch64-unknown-linux-musl
+            dist/relcut-x86_64-unknown-linux-musl
+            dist/SHA256SUMS
+            dist/relcut.cdx.json

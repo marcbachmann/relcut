@@ -1,0 +1,9 @@
+[env]
+MACOSX_DEPLOYMENT_TARGET = "11.0"
+
+# One static binary that runs on any Linux, whatever its libc.
+[target.'cfg(target_env = "musl")']
+rustflags = ["-C", "target-feature=+crt-static"]
+
+[target.'cfg(target_os = "macos")']
+rustflags = ["-C", "link-arg=-Wl,-dead_strip"]

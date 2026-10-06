@@ -193,7 +193,7 @@ pub fn publish(config: &Config, plan: &Plan, git: &Git) -> Result<(), String> {
     if let Some(id) = config.check_run_id.as_deref().filter(|_| !config.dry_run) {
         let title = format!("Released {tag} · {what}");
         match gh.update_check_run(id, &title, &released) {
-            Ok(()) => log::ok(&format!("Check: {title}")),
+            Ok(()) => log::ok(&format!("Check run: {title}")),
             Err(e) => log::warn(&format!("updating the check run: {e}")),
         }
     }

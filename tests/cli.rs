@@ -2710,7 +2710,7 @@ fn a_pull_request_into_a_release_branch_fails_on_a_feature() {
     let log = stdout(&out);
     assert!(!out.status.success(), "{log}");
     assert!(log.contains("::error::v1.5.0 is not below v1.5.0"), "{log}");
-    assert!(log.contains("merging into release-1.4 releases"), "{log}");
+    assert!(log.contains("merging into release-1.4, a release branch"), "{log}");
     assert!(
         outputs.contains("release<<") && outputs.contains("\nfalse\n"),
         "{outputs}"
@@ -3148,7 +3148,7 @@ fn the_check_run_reads_the_release_it_made() {
     let log = stdout(&out);
     assert!(out.status.success(), "{log}");
     assert!(
-        log.contains("\n   Check: Released v1.0.1 · github"),
+        log.contains("\n   Check run: Released v1.0.1 · github"),
         "{log}"
     );
     let seen = requests(&seen);

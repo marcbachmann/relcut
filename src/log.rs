@@ -58,6 +58,28 @@ fn started() -> Instant {
     *STARTED.get_or_init(Instant::now)
 }
 
+// The action's node sets O_NONBLOCK on the pipe the runner reads, and keeps
+// it through execve. A full pipe then fails a write with EAGAIN, which
+// println! panics on, rather than waiting for the runner to read.
+pub fn blocking_stdio() {
+    use std::ffi::c_int;
+    unsafe extern "C" {
+        fn fcntl(fd: c_int, cmd: c_int, ...) -> c_int;
+    }
+    const F_GETFL: c_int = 3;
+    const F_SETFL: c_int = 4;
+    #[cfg(target_os = "macos")]
+    const O_NONBLOCK: c_int = 0x4;
+    #[cfg(not(target_os = "macos"))]
+    const O_NONBLOCK: c_int = 0o4000;
+    for fd in 0..=2 {
+        let flags = unsafe { fcntl(fd, F_GETFL) };
+        if flags >= 0 && flags & O_NONBLOCK != 0 {
+            unsafe { fcntl(fd, F_SETFL, flags & !O_NONBLOCK) };
+        }
+    }
+}
+
 pub fn init(style: Option<&str>) -> Result<(), String> {
     started();
     let actions = match style.unwrap_or("auto") {

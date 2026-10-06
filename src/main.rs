@@ -183,6 +183,7 @@ fn unshallow(command: &str, config: &Config, git: &Git) -> Result<(), String> {
 }
 
 fn main() {
+    log::blocking_stdio();
     credentials::seal();
     leftover::adopt_orphans();
     let args: Vec<String> = std::env::args().skip(1).collect();

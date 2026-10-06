@@ -101,14 +101,22 @@ impl Repo {
     }
 
     fn run_with(&self, args: &[&str], env: &[(&str, &str)]) -> (Output, String) {
+        let out = self.command(args, env).output().unwrap();
+        (
+            out,
+            std::fs::read_to_string(self.root.join("outputs")).unwrap(),
+        )
+    }
+
+    fn command(&self, args: &[&str], env: &[(&str, &str)]) -> Command {
         let outputs = self.root.join("outputs");
         let _ = std::fs::remove_file(&outputs);
         std::fs::write(&outputs, "").unwrap();
         let event = self.root.join("event.json");
         let payload = serde_json::json!({"repository": {"default_branch": self.trunk}});
         std::fs::write(&event, payload.to_string()).unwrap();
-        let out = Command::new(env!("CARGO_BIN_EXE_relcut"))
-            .args(args)
+        let mut cmd = Command::new(env!("CARGO_BIN_EXE_relcut"));
+        cmd.args(args)
             .current_dir(&self.work)
             .env_clear()
             .env("PATH", std::env::var("PATH").unwrap())
@@ -125,10 +133,8 @@ impl Repo {
             .env("GITHUB_ACTIONS", "true")
             .env("NO_COLOR", "1")
             .env("RUNNER_TEMP", &self.root)
-            .envs(env.iter().copied())
-            .output()
-            .unwrap();
-        (out, std::fs::read_to_string(outputs).unwrap())
+            .envs(env.iter().copied());
+        cmd
     }
 }
 
@@ -2710,7 +2716,10 @@ fn a_pull_request_into_a_release_branch_fails_on_a_feature() {
     let log = stdout(&out);
     assert!(!out.status.success(), "{log}");
     assert!(log.contains("::error::v1.5.0 is not below v1.5.0"), "{log}");
-    assert!(log.contains("merging into release-1.4, a release branch"), "{log}");
+    assert!(
+        log.contains("merging into release-1.4, a release branch"),
+        "{log}"
+    );
     assert!(
         outputs.contains("release<<") && outputs.contains("\nfalse\n"),
         "{outputs}"
@@ -4020,4 +4029,67 @@ fn a_publish_after_prepare_never_fetches_into_a_shallow_checkout() {
     let (out, outputs) = repo.run("publish", &on("main"));
     assert!(out.status.success(), "{}", stdout(&out));
     assert!(outputs.contains("\nv1.0.1\n"), "{outputs}");
+}
+
+// The action's node leaves the runner's pipe non-blocking through execve, and
+// the runner reads it slower than a long log fills it.
+#[test]
+fn a_long_log_waits_for_a_non_blocking_stdout_to_drain() {
+    use std::ffi::c_int;
+    use std::io::{Read, Write};
+    use std::os::fd::AsRawFd;
+    unsafe extern "C" {
+        fn fcntl(fd: c_int, cmd: c_int, ...) -> c_int;
+    }
+    const F_GETFL: c_int = 3;
+    const F_SETFL: c_int = 4;
+    #[cfg(target_os = "macos")]
+    const O_NONBLOCK: c_int = 0x4;
+    #[cfg(not(target_os = "macos"))]
+    const O_NONBLOCK: c_int = 0o4000;
+
+    let repo = Repo::new("non-blocking", "main");
+    repo.commit("feat: first").tag("v1.0.0");
+    let mut import = Command::new("git")
+        .args(["fast-import", "--quiet"])
+        .current_dir(&repo.work)
+        .stdin(std::process::Stdio::piped())
+        .spawn()
+        .unwrap();
+    let mut stream = String::new();
+    for i in 0..2000 {
+        let message = format!("fix: change number {i} with a subject long enough to fill the pipe");
+        stream += &format!(
+            "commit refs/heads/main\ncommitter t <t@example.com> 0 +0000\ndata {}\n{message}\n",
+            message.len()
+        );
+        if i == 0 {
+            stream += "from refs/heads/main^0\n";
+        }
+    }
+    import
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(stream.as_bytes())
+        .unwrap();
+    assert!(import.wait().unwrap().success());
+
+    let (mut reader, writer) = std::io::pipe().unwrap();
+    let fd = writer.as_raw_fd();
+    unsafe { fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK) };
+    let relcut = repo
+        .command(&["check"], &[("GITHUB_REF_NAME", "main")])
+        .stdout(writer)
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .unwrap();
+    std::thread::sleep(std::time::Duration::from_millis(500));
+    let mut log = String::new();
+    reader.read_to_string(&mut log).unwrap();
+    let out = relcut.wait_with_output().unwrap();
+    let log = format!("{log}{}", String::from_utf8_lossy(&out.stderr));
+    assert!(out.status.success(), "{log}");
+    assert!(log.len() > 128 * 1024, "{}", log.len());
+    assert!(log.contains("2000 commits since v1.0.0"), "{log}");
 }

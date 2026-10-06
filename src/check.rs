@@ -119,9 +119,9 @@ pub fn check(config: &Config, plan: &Plan, git: &Git) -> Result<(bool, String), 
         let waits = waiting(config, plan);
         let releases = plan.releasing && plan.next.is_some() && outside.is_none() && !waits;
         let branch = match (&plan.branch, &plan.target, plan.target_releases) {
-            (Some(b), _, true) => format!("{b} releases"),
+            (Some(b), _, true) => format!("{b} is a release branch"),
             (Some(b), _, false) => format!("{b} does not release"),
-            (None, Some(t), true) => format!("merging into {t} releases"),
+            (None, Some(t), true) => format!("merging into {t}, a release branch"),
             (None, Some(t), false) => format!("{t} does not release"),
             (None, None, _) => "nothing releases here".into(),
         };
@@ -270,7 +270,7 @@ pub fn check(config: &Config, plan: &Plan, git: &Git) -> Result<(bool, String), 
                 Some(token) => {
                     let gh = github::GitHub::new(&r.api_url, &r.repository, token);
                     match gh.update_check_run(id, &title, &body) {
-                        Ok(()) => log::ok(&format!("Check: {title}")),
+                        Ok(()) => log::ok(&format!("Check run: {title}")),
                         Err(e) => log::warn(&format!("updating the check run: {e}")),
                     }
                 }

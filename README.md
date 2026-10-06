@@ -28,7 +28,7 @@ git hook is handed a token, or finds one in relcut's environment or git config.
 
 ── Commits ─────────────────────────────────────
    2 conventional commits
-   main releases
+   main is a release branch
 ▸ 2 commits since v1.0.0
    v1.1.0 · 2 commits since v1.0.0 · 0.0s
 

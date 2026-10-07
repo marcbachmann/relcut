@@ -474,9 +474,9 @@ fn check_outputs_the_notes_and_publish_takes_edited_ones() {
     let (out, _) = repo.run("publish", &edited);
     assert!(out.status.success(), "{}", stdout(&out));
     assert!(
-        stdout(&out).contains(
-            "would create v1.1.0, 'Version v1.1.0', with these notes:\n\n    Hand written\n"
-        ) && stdout(&out).contains("\n    Hand written\n"),
+        stdout(&out)
+            .contains("would create v1.1.0, 'v1.1.0', with these notes:\n\n    Hand written\n")
+            && stdout(&out).contains("\n    Hand written\n"),
         "{}",
         stdout(&out)
     );
@@ -3143,7 +3143,7 @@ fn a_backport_never_becomes_the_latest_github_release() {
     let seen = requests(&seen);
     let created: serde_json::Value = serde_json::from_str(&seen[1].1).unwrap();
     assert_eq!(created["tag_name"], "v1.4.3");
-    assert_eq!(created["name"], "Version v1.4.3");
+    assert_eq!(created["name"], "v1.4.3");
     assert_eq!(created["make_latest"], "false");
     assert!(created["draft"].is_null(), "{created}");
 }

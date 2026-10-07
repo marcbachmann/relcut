@@ -85,7 +85,7 @@ inputs:
     description: '{notes} {assets} {version} {tag} {previous_tag} {date} {repository} {compare_url}'
     default: ''
   release-title:
-    description: '{version} {tag} {date} {repository}; by default Version {tag}'
+    description: '{version} {tag} {date} {repository}; by default {tag}'
     default: ''
   comment-template:
     description: '{version} {tag} {date} {repository} {release_url} {npm_package} {dist_tags}; by default the tag, with npm also the package and its dist-tags'

@@ -238,14 +238,18 @@ impl Plan {
         let releasing = target_releases && branch.is_some();
         let trunk = target.is_some() && target == runner().default_branch;
         let tag_of = |release: &Option<(String, Version)>| release.as_ref().map(|(t, _)| t.clone());
-        let foreign = git.foreign_releases(&config.tag_prefix)?;
+        // A pull request releases as merged into its base as it is now: GitHub
+        // keeps a merge ref built on the base as it was, which misses releases.
+        let base_tip = runner().base.as_deref().and_then(|b| git.branch_tip(b));
+        let tips: Vec<&str> = ["HEAD"].into_iter().chain(base_tip.as_deref()).collect();
+        let foreign = git.foreign_releases(&config.tag_prefix, &tips)?;
         let releases_on = target.as_deref().filter(|_| target_releases);
         let evaluate = |last: &Option<(String, Version)>, commits: &[(String, String)]| {
             evaluate(config, git, releases_on, trunk, &foreign, last, commits)
         };
-        let mut releases = git.releases(&config.tag_prefix)?;
+        let mut releases = git.releases(&config.tag_prefix, &tips)?;
         let mut last = releases.pop();
-        let mut commits = git.commits_since(tag_of(&last).as_deref())?;
+        let mut commits = git.commits_since(tag_of(&last).as_deref(), &tips)?;
         let mut outcome = evaluate(&last, &commits)?;
         let mut resumed = false;
         if releasing && let Some((tag, version)) = &last {
@@ -253,7 +257,7 @@ impl Plan {
             if at_head.contains(tag) {
                 releases.retain(|(t, _)| !at_head.contains(t));
                 let before = releases.pop();
-                let made = git.commits_since(tag_of(&before).as_deref())?;
+                let made = git.commits_since(tag_of(&before).as_deref(), &tips)?;
                 let earlier = evaluate(&before, &made)?;
                 if earlier.next.is_some_and(|(_, v)| v == *version) {
                     (last, commits, outcome, resumed) = (before, made, earlier, true);

@@ -2726,6 +2726,30 @@ fn a_pull_request_into_a_release_branch_fails_on_a_feature() {
     );
 }
 
+// GitHub builds the merge ref against the base as it was, and keeps it until
+// the pull request changes: main can have released since.
+#[test]
+fn a_pull_request_behind_its_base_releases_above_the_base() {
+    let repo = Repo::new("pr-behind", "main");
+    repo.commit("feat: first").tag("v1.0.0").push("main");
+    git(&repo.work, &["checkout", "-q", "-b", "topic"]);
+    repo.commit("feat: of the pull request");
+    git(&repo.work, &["checkout", "-q", "main"]);
+    repo.commit("feat: on main").tag("v1.1.0").push("main");
+    git(&repo.work, &["checkout", "-q", "--detach", "v1.0.0"]);
+    git(
+        &repo.work,
+        &["merge", "-q", "--no-ff", "--no-edit", "topic"],
+    );
+
+    let (out, outputs) = repo.run("check", &pull_request(&[]));
+    let log = stdout(&out);
+    assert!(out.status.success(), "{log}");
+    assert!(outputs.contains("\nv1.2.0\n"), "{outputs}");
+    assert!(log.contains("v1.2.0 · 1 commit since v1.1.0"), "{log}");
+    assert!(!log.contains("backport"), "{log}");
+}
+
 #[test]
 fn a_pull_request_fails_on_its_own_commits_that_are_not_conventional() {
     let repo = Repo::new("pr-commits", "main");

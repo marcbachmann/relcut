@@ -129,24 +129,32 @@ impl Git {
         })
     }
 
-    // The version tags merged into HEAD, the highest last.
-    pub fn releases(&self, prefix: &str) -> Result<Vec<(String, Version)>, String> {
-        let tags = self.run(&["tag", "--merged", "HEAD", "--list", &format!("{prefix}*")])?;
+    // The version tags merged into any of the tips, the highest last.
+    pub fn releases(&self, prefix: &str, tips: &[&str]) -> Result<Vec<(String, Version)>, String> {
+        let tags = self.tags("--merged", prefix, tips)?;
         let mut releases = versions(tags.lines(), prefix);
         releases.sort_by_key(|(_, v)| *v);
         Ok(releases)
     }
 
-    // The version tags outside HEAD's history: the releases of other branches.
-    pub fn foreign_releases(&self, prefix: &str) -> Result<Vec<(String, Version)>, String> {
-        let tags = self.run(&[
-            "tag",
-            "--no-merged",
-            "HEAD",
-            "--list",
-            &format!("{prefix}*"),
-        ])?;
+    // The version tags outside the tips' history: the releases of other branches.
+    pub fn foreign_releases(
+        &self,
+        prefix: &str,
+        tips: &[&str],
+    ) -> Result<Vec<(String, Version)>, String> {
+        let tags = self.tags("--no-merged", prefix, tips)?;
         Ok(versions(tags.lines(), prefix))
+    }
+
+    fn tags(&self, filter: &str, prefix: &str, tips: &[&str]) -> Result<String, String> {
+        let pattern = format!("{prefix}*");
+        let mut args = vec!["tag"];
+        for tip in tips {
+            args.extend([filter, tip]);
+        }
+        args.extend(["--list", &pattern]);
+        self.run(&args)
     }
 
     // A branch as the checkout knows it, from the remote or a local one.
@@ -170,8 +178,11 @@ impl Git {
         Ok(tags.lines().map(str::to_string).collect())
     }
 
-    fn log(&self, range: &str) -> Result<Vec<(String, String)>, String> {
-        let log = self.run(&["log", "--no-merges", "--format=%H%x1f%B%x1e", range])?;
+    fn log(&self, revisions: &[&str]) -> Result<Vec<(String, String)>, String> {
+        let mut args = vec!["log", "--no-merges", "--format=%H%x1f%B%x1e"];
+        args.extend(revisions);
+        args.push("--");
+        let log = self.run(&args)?;
         Ok(log
             .split('\x1e')
             .filter_map(|entry| {
@@ -183,12 +194,22 @@ impl Git {
 
     // The pull request's own commits: those not yet on the branch it merges into.
     pub fn commits_beyond(&self, base: &str) -> Result<Vec<(String, String)>, String> {
-        self.log(&format!("origin/{base}..HEAD"))
+        self.log(&[&format!("origin/{base}..HEAD")])
             .map_err(|e| format!("{e}; check out with fetch-depth: 0"))
     }
 
-    pub fn commits_since(&self, tag: Option<&str>) -> Result<Vec<(String, String)>, String> {
-        self.commits_between(tag, "HEAD")
+    pub fn commits_since(
+        &self,
+        tag: Option<&str>,
+        tips: &[&str],
+    ) -> Result<Vec<(String, String)>, String> {
+        let not = tag.map(|t| format!("^{t}"));
+        self.log(
+            &not.iter()
+                .map(String::as_str)
+                .chain(tips.iter().copied())
+                .collect::<Vec<_>>(),
+        )
     }
 
     pub fn commits_between(
@@ -196,7 +217,7 @@ impl Git {
         tag: Option<&str>,
         to: &str,
     ) -> Result<Vec<(String, String)>, String> {
-        self.log(&tag.map_or(to.into(), |t| format!("{t}..{to}")))
+        self.commits_since(tag, &[to])
     }
 
     // The commits of `to` itself since `tag`, without those merges brought in.

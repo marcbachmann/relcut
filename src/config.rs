@@ -8,7 +8,7 @@ const RELEASE_NOTES_TEMPLATE: &str = "{notes}";
 const COMMENT_TEMPLATE: &str = "\u{a0}🚀\u{a0} Released in [`{tag}`]({release_url})";
 const NPM_COMMENT_TEMPLATE: &str =
     "\u{a0}🚀\u{a0} Released in [`{tag}`]({release_url}) · `{npm_package}` on {dist_tags}";
-const RELEASE_TITLE: &str = "Version {tag}";
+const RELEASE_TITLE: &str = "{tag}";
 
 pub const SETTINGS: [&str; 28] = [
     "PUBLISH",

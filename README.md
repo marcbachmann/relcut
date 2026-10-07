@@ -496,7 +496,7 @@ commas and newlines). `relcut <command> --help` lists what each command uses.
 | `github-comments` | `true` | Comment on the released pull requests; none on a first release |
 | `release-notes` | | Replaces the generated notes |
 | `release-notes-template` | `{notes}` | Also `{version}` `{tag}` `{previous_tag}` `{date}` `{repository}` `{compare_url}` |
-| `release-title` | `Version {tag}` | The GitHub release's title; also `{version}` `{date}` `{repository}` |
+| `release-title` | `{tag}` | The GitHub release's title; also `{version}` `{date}` `{repository}` |
 | `comment-template` | `🚀 Released in [{tag}]({release_url})`, with npm `· {npm_package} on {dist_tags}` | Also `{version}` `{date}` `{repository}`; `{npm_package}` and `{dist_tags}` are empty without npm |
 | `working-directory` | `.` | The package to release |
 | `pack-dir` | `$RUNNER_TEMP/relcut` | Where `prepare` leaves the tarball for `publish` |

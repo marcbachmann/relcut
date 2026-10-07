@@ -129,7 +129,7 @@ release: commit or a Release: footer [default: auto]",
     ),
     (
         "--release-title <text>",
-        "{version} {tag} {date} {repository}\n[default: Version {tag}]",
+        "{version} {tag} {date} {repository}\n[default: {tag}]",
         PUBLISH,
     ),
     (
